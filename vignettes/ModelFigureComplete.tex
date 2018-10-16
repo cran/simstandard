@@ -1,0 +1,95 @@
+\documentclass[tikz, border = 5pt]{standalone}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning, fit}
+\usetikzlibrary{decorations.pathreplacing}
+\usetikzlibrary{decorations.text}
+\usetikzlibrary{arrows,shapes,backgrounds, shadows,fadings,trees}
+\usetikzlibrary{calc}
+\usepackage{lmodern}
+
+\usepackage[T1]{fontenc}
+
+\definecolor{cA}{RGB}{143,136,190}
+\definecolor{cB}{RGB}{51,103,172}
+
+\begin{document}
+
+
+
+\begin{tikzpicture}[scale=1,  
+latent/.style={circle, fill = gray, minimum size = 3cm, align = center,inner sep = 0cm,font = \fontsize{45}{60}\selectfont, text = white},
+error/.style={circle, fill = gray, inner sep=1mm, minimum size=1.5cm, font=\LARGE, text = white},
+ob/.style={rectangle, fill = gray,inner sep=2mm, minimum width=1.75cm, minimum height=1.75cm, align=center, rounded corners=0.1cm,font=\Huge, text = white},
+post/.style={->,draw,shorten >=2pt,shorten <=2pt,>=latex', very thick, font=\LARGE, color = gray!70},
+cov/.style={<->,draw,shorten >=2pt,shorten <=2pt,>=latex', color = gray!70, looseness=1.3, very thick, font=\large, bend left=50},
+variance/.style={<->,  >=latex', draw, very thick, bend left=245, looseness=6,shorten >=2pt,shorten <=2pt, font=\Large, color = gray!70},
+upvariance/.style={<->,  >=latex', thick, shorten >=2pt,shorten <=2pt, font=\Large,bend left = 115,looseness=4},
+label/.style={fill=white,circle,inner sep = 0.1mm,pos=0.475, font = \Large},
+A/.style = {cA},
+B/.style = {cB}]
+
+\node[ob, fill = cA] (A1) {$A_1$};
+\node[ob, right = 0.5cm of A1, fill = cA] (A2) {$A_2$};
+\node[ob, right = 0.5cm of A2, fill = cA] (A3) {$A_3$};
+\node[ob, right = 1cm of A3, fill = cB] (B1) {$B_1$};
+\node[ob, right = 0.5cm of B1, fill = cB] (B2) {$B_2$};
+\node[ob, right = 0.5cm of B2, fill = cB] (B3) {$B_3$};
+
+
+
+\node[latent, above = 2.5cm of A2, fill = cA] (A) {$A$}; 
+\node[latent, above = 2.5cm of B2, fill = cB] (B) {$B$}; 
+
+\path[post, cA] (A)  to node[label]{.6} (B);
+
+\path[post, cA] (A)  to node[label]{.7} (A1);
+\path[post, cA] (A)  to node[label]{.8} (A2);
+\path[post, cA] (A)  to node[label]{.9} (A3);
+
+\path[post, cB] (B)  to node[label]{.7} (B1);
+\path[post, cB] (B)  to node[label]{.8} (B2);
+\path[post, cB] (B)  to node[label]{.9} (B3);
+
+\foreach \i in {1,2,3} {
+	\node[error, below = 0.75cm of A\i, fill = cA] (eA\i) {$e_{A_\i}$};
+	\node[error, below = 0.75cm of B\i, fill = cB] (eB\i) {$e_{B_\i}$};
+	\path[post, cA] (eA\i) to (A\i);
+	\path[post, cB] (eB\i) to (B\i);
+}
+
+\path[variance, cA] (eA1.250) to node[label]{.51} (eA1.290);
+\path[variance, cB] (eB1.250) to node[label]{.17} (eB1.290);
+\path[variance, cA] (eA2.250) to node[label]{.36} (eA2.290);
+\path[variance, cB] (eB2.250) to node[label]{.36} (eB2.290);
+\path[variance, cA] (eA3.250) to node[label]{.19} (eA3.290);
+\path[variance, cB] (eB3.250) to node[label]{.19} (eB3.290);
+
+
+\path[variance, cA] (A.80) to node[label]{1} (A.100);
+
+\path[post, cA] (A) to  node[label]{.3} (B1);
+
+\node[error, right = 0.75cm of B, fill = cB] (dB) {$d_{B}$};
+
+\path[post, cB] (dB) to (B);
+\path[variance, cB] (dB.70) to node[label]{.64} (dB.110);
+
+%\node (s) [below = of Gt]{};
+%\node (n) [above = of Motor]{};
+%\node (w) [left = of Power]{};
+%\node (e) [right = of hex.east]{};
+\end{tikzpicture}
+
+
+
+
+
+
+
+\end{document}
+
