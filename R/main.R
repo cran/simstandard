@@ -1,16 +1,17 @@
 #' Return model characteristics
 #'
-#' Function that takes a lavaan model with standardized parameters returns a list with model caracteristics
+#' Function that takes a lavaan model with standardized parameters and returns a list with model characteristics
 #'
-#'This function supports the `~` operator for regressions, the `~~` for covariances (but not variances), and the `=~` latent variable loadings. It does not support intercepts (e.g,. `y ~ 1`), thresholds, scaling factors, formative factors, or equality constraints.
+#' This function supports the `~` operator for regressions, the `~~` for covariances (but not variances), and the `=~` latent variable loadings. It does not support intercepts (e.g,. `y ~ 1`), thresholds, scaling factors, formative factors, or equality constraints.
 #' @export
-#' @param m Structural model represented by lavaan Syntax
+#' @param m Structural model represented by lavaan syntax
 #' @param max_iterations Maximum number of iterations before the algorithm fails
 #' @importFrom lavaan lavParTable
 #' @return list of path and covariance coefficients
 #' @examples
+#' library(simstandard)
 #' # lavaan model
-#' m = "Latent_1 =~ 0.8 * Ob_1 + 0.8 * Ob_2"
+#' m = "Latent_1 =~ 0.8 * Ob_1 + 0.7 * Ob_2 + 0.4 * Ob_3"
 #'
 #' sim_standardized_matrices(m)
 sim_standardized_matrices <- function(m, max_iterations = 100) {
@@ -21,7 +22,8 @@ sim_standardized_matrices <- function(m, max_iterations = 100) {
   # Checks----
 
   # Check for formative variables
-  if (any(pt$op == "<~")) stop("Formative variables (defined with <~) are not allowed for this function.")
+  if (any(pt$op == "<~")) stop(
+    "Formative variables (defined with <~) are not allowed for this function.")
 
   # Check for user-set variances
   if (any((pt$user != 0) & (pt$lhs == pt$rhs) & (pt$op == "~~"))) {
@@ -93,10 +95,12 @@ sim_standardized_matrices <- function(m, max_iterations = 100) {
   v_observed <- v_all[!(v_all %in% v_latent)]
   v_indicator <- unique(pt$rhs[pt$op == "=~"])
   v_y <- unique(pt$lhs[pt$op == "~"])
-  v_latent_endogenous <- v_latent[(v_latent %in% v_y) | (v_latent %in% v_indicator)]
+  v_latent_endogenous <- v_latent[
+    (v_latent %in% v_y) | (v_latent %in% v_indicator)]
   v_latent_exogenous <- v_latent[!(v_latent %in% v_latent_endogenous)]
 
-  v_observed_endogenous <- v_observed[v_observed %in% v_y | v_observed %in% v_indicator]
+  v_observed_endogenous <- v_observed[
+    v_observed %in% v_y | v_observed %in% v_indicator]
   v_observed_exogenous <- v_observed[!v_observed %in% v_observed_endogenous]
   v_observed_indicator <- v_observed[v_observed %in% v_indicator]
   v_latent_indicator <- v_latent[v_latent %in% v_indicator]
@@ -181,7 +185,7 @@ sim_standardized_matrices <- function(m, max_iterations = 100) {
   while ((round(sum(diag(R)), 10) != k) * (iterations < max_iterations)) {
     iA <- solve(diag(k) - A)
     R <- iA %*% S %*% t(iA)
-    sdS <- diag(diag(S)^0.5)
+    sdS <- diag(diag(S) ^ 0.5)
     S <- diag(diag(diag(k) - R)) + (sdS %*% exo_cor %*% sdS)
     diag(S)[diag(S) < 0] <- 0.00000001
     iterations <- iterations + 1
@@ -283,7 +287,7 @@ sim_standardized_matrices <- function(m, max_iterations = 100) {
       drop = F
     ] %*% A_composite
 
-    A_composite_w <- A_composite %*% diag(diag(CM_composite)^-0.5,
+    A_composite_w <- A_composite %*% diag(diag(CM_composite) ^ -0.5,
       nrow = nrow(CM_composite)
     )
     colnames(A_composite_w) <- v_composite_score
@@ -319,6 +323,23 @@ sim_standardized_matrices <- function(m, max_iterations = 100) {
     v_FS <- character(0)
     v_composite_score <- character(0)
   }
+
+  # Make complete lavaan model syntax
+  lavaan_variances <- paste0(
+    v_order,
+    " ~~ ",
+    diag(S[v_order, v_order]),
+    " * ",
+    v_order,
+    collapse = "\n")
+
+  # Factor Score Validity
+  factor_score_validity <- diag(R_all[v_FS,
+                                      v_factor_score])
+  names(factor_score_validity) <- v_FS
+  factor_score_se <- sqrt(1 - factor_score_validity ^ 2)
+
+
   # Return list ----
 
   l_names <- list(
@@ -349,7 +370,14 @@ sim_standardized_matrices <- function(m, max_iterations = 100) {
     ),
     Coefficients = list(
       factor_score = A_factor_score,
+      factor_score_validity = factor_score_validity,
+      factor_score_se = factor_score_se,
       composite_score = A_composite_w
+    ),
+    lavaan_models = list(
+      model_without_variances = m,
+      model_with_variances = paste0(m, "\n# Variances\n", lavaan_variances),
+      model_free = fixed2free(m)
     ),
     v_names = l_names,
     iterations = iterations
@@ -364,7 +392,7 @@ sim_standardized_matrices <- function(m, max_iterations = 100) {
 #' This function supports the `~` operator for regressions, the `~~` for covariances (but not variances), and the `=~` latent variable loadings. It does not support intercepts (e.g,. `y ~ 1`), thresholds, scaling factors, formative factors, or equality constraints.
 #'
 #' @export
-#' @param m Structural model represented by lavaan Syntax
+#' @param m Structural model represented by lavaan syntax
 #' @param n Number of simulated cases
 #' @param observed Include observed variables
 #' @param latent Include latent variables
@@ -375,8 +403,9 @@ sim_standardized_matrices <- function(m, max_iterations = 100) {
 #' @return tibble with standardized data
 #' @importFrom mvtnorm rmvnorm
 #' @examples
+#' library(simstandard)
 #' # Lavaan model
-#' m = "Latent_1 =~ 0.8 * Ob_1 + 0.8 * Ob_2"
+#' m = "Latent_1 =~ 0.8 * Ob_1 + 0.7 * Ob_2 + 0.4 * Ob_3"
 #'
 #' # simulate 10 cases
 #' sim_standardized(m, n = 10)
@@ -390,9 +419,11 @@ sim_standardized <- function(
   composites = FALSE,
   matrices = FALSE) {
 
-  # Get main object
+  # Get main object from sim_standardized_matrices
   o <- sim_standardized_matrices(m)
-  # Simulate exogenous variables
+
+  # Names of variables in S (Symmetric) matrix
+
   S_names <- c(
     o$v_names$v_observed_exogenous,
     o$v_names$v_observed_endogenous,
@@ -400,6 +431,7 @@ sim_standardized <- function(
     o$v_names$v_latent_endogenous
   )
 
+  # Simulate exogenous variables in S matricx
   u <- rmvnorm(n = n, sigma = o$RAM_matrices$S[S_names, S_names, drop = F])
   colnames(u) <- c(
     o$v_names$v_observed_exogenous,
@@ -407,25 +439,32 @@ sim_standardized <- function(
     o$v_names$v_latent_exogenous,
     o$v_names$v_disturbance
   )
+
+  # Create all variables from exogenous variables
   v <- u %*% t(o$RAM_matrices$iA[S_names, S_names, drop = F])
+
+  # Make blank matrix with n rows
   d_blank <- matrix(nrow = n, ncol = 0)
-  # d_observed <- v[ , o$v_names$v_observed, drop = F]
-  # d_latent <- v[ , o$v_names$v_latent, drop = F]
-  # d_disturbance <- u[ , o$v_names$v_disturbance, drop = F]
-  # d_errors <- u[ , o$v_names$v_error, drop = F]
+
+  # Extract observed indicators of latent varibles
   d_observed_indicators <- v[, o$v_names$v_observed_indicator, drop = F]
 
+  # Calculate estimated factor scores
   if (length(o$v_names$v_observed_indicator) > 0) {
     d_factor_scores <- d_observed_indicators %*% o$Coefficients$factor_score
   } else {
     d_factor_scores <- d_blank
   }
 
+  # Calculate composite scores
   if (length(o$v_names$v_observed_indicator) > 0) {
-    d_composite_scores <- d_observed_indicators %*% o$Coefficients$composite_score
+    d_composite_scores <- d_observed_indicators %*%
+      o$Coefficients$composite_score
   } else {
     d_composite_scores <- d_blank
   }
+
+  # Make data to be returned
   d <- tibble::as_tibble(
     cbind(
       v[, c(o$v_names$v_observed, o$v_names$v_latent), drop = F],
@@ -435,8 +474,9 @@ sim_standardized <- function(
     )
   )
 
-  if (matrices) attr(d, "matrices") <- o
 
+
+  # Decide which variables to return
   v_include <- character(0)
   if (observed) v_include <- c(v_include, o$v_names$v_observed)
   if (latent) v_include <- c(v_include, o$v_names$v_latent)
@@ -445,6 +485,121 @@ sim_standardized <- function(
   if (factor_scores) v_include <- c(v_include, o$v_names$v_factor_score)
   if (composites) v_include <- c(v_include, o$v_names$v_composite_score)
 
+  d <- d[, v_include]
 
-  return(d[,v_include])
+  # Attach metadata as attribute
+  if (matrices) attr(d, "matrices") <- o
+
+  # Return tibble
+  return(d)
+}
+
+#' Remove fixed parameters from a lavaan model
+#'
+#' @export
+#' @param m Structural model represented by lavaan syntax
+#' @return character string representing lavaan model
+#' @importFrom rlang .data
+#' @examples
+#' library(simstandard)
+#' # lavaan model with fixed parameters
+#' m = "
+#' Latent_1 =~ 0.9 * Ob_11 + 0.8 * Ob_12 + 0.7 * Ob_13
+#' Latent_2 =~ 0.9 * Ob_21 + 0.6 * Ob_22 + 0.4 * Ob_23
+#' "
+#' # Same model, but with fixed parameters removed.
+#' m_free <- fixed2free(m)
+#' cat(m_free)
+fixed2free <- function(m){
+  m %>%
+    lavaan::lavaanify(fixed.x = FALSE) %>%
+    dplyr::filter(.data$lhs != .data$rhs) %>%
+    dplyr::group_by(.data$lhs, .data$op) %>%
+    dplyr::summarise(rhs = paste(.data$rhs, collapse = " + ")) %>%
+    dplyr::arrange(dplyr::desc(.data$op)) %>%
+    tidyr::unite("l", .data$lhs, .data$op, .data$rhs, sep = " ") %>%
+    dplyr::pull(.data$l) %>%
+    paste(collapse = "\n")
+
+}
+
+
+#' Function that takes a lavaan model with standardized paths and loadings and returns a complete lavaan model syntax with standardized variances
+#'
+#' @export
+#' @param m Structural model represented by lavaan syntax
+#' @return character string representing lavaan model
+#' @examples
+#' library(simstandard)
+#' # lavaan model
+#' m = "
+#' Latent_1 =~ 0.9 * Ob_11 + 0.8 * Ob_12 + 0.7 * Ob_13
+#' Latent_2 =~ 0.9 * Ob_21 + 0.6 * Ob_22 + 0.4 * Ob_23
+#' Latent_2 ~ 0.6 * Latent_1
+#' "
+#' # Same lavaan syntax, but with standardized variances
+#' m_complete <- model_complete(m)
+#' cat(m_complete)
+model_complete <- function(m){
+  sim_standardized_matrices(m)$lavaan_models$model_with_variances
+}
+
+#' Add factor scores to observed data
+#'
+#' @export
+#' @param d A data.frame with observed data in standardized form (i.e, z-scores)
+#' @param m A character string with lavaan model
+#' @param CI Add confidence intervals? Defaults to `FALSE`. If `TRUE`, For each factor score, a lower and upper bound of the confidence interval is created. For example, the lower bound of factor score `X` is `X_LB`, and the upper bound is `X_UB`.
+#' @param p confidence interval proportion. Defaults to 0.95
+#' @param ... parameters passed to simstandardized_matrices
+#' @return data.frame with observed data and estimated factor scores
+#' @examples
+#' library(simstandard)
+#' # lavaan model
+#' m = "
+#' X =~ 0.9 * X1 + 0.8 * X2 + 0.7 * X3
+#' "
+#'
+#' # Make data.frame for two cases
+#' d <- data.frame(
+#'   X1 = c(1.2, -1.2),
+#'   X2 = c(1.5, -1.8),
+#'   X3 = c(1.8, -1.1))
+#'
+#' # Compute factor scores for two cases
+#' add_factor_scores(d, m)
+add_factor_scores <- function(d, m, CI = FALSE, p = 0.95, ...) {
+  sm <- sim_standardized_matrices(m, ...)
+
+  # Coefficients for estimated factor scores
+  v_FS <- paste0(sm$v_names$v_latent, "_FS")
+  latent_factor_score <- sm$Coefficients$factor_score[, v_FS, drop = FALSE]
+
+  # Remove _FS from factor score names
+  colnames(latent_factor_score) <- stringr::str_remove_all(
+    colnames(latent_factor_score), "_FS")
+
+  # Get observed score names
+  v_observed <- rownames(sm$Coefficients$factor_score)
+
+  # Get observed data
+  d_observed <- as.matrix(d[, v_observed, drop = FALSE])
+
+  # Make factor scores
+  d_factor_score <- d_observed %*% latent_factor_score
+
+  # Bind factor scores to observed data
+  d_all <- cbind(as.data.frame(d), as.data.frame(d_factor_score))
+
+  if (CI) {
+    # Make CI
+    z <- -1 * stats::qnorm((1 - p) / 2)
+    FS_se <- sm$Coefficients$factor_score_se[v_FS]
+    d_lower_bound <- d_factor_score - z * FS_se
+    colnames(d_lower_bound) <- paste0(colnames(d_factor_score), "_LB")
+    d_upper_bound <- d_factor_score + z * FS_se
+    colnames(d_upper_bound) <- paste0(colnames(d_factor_score), "_UB")
+    d_all <- cbind(d_all, d_lower_bound, d_upper_bound)
+  }
+  d_all
 }
