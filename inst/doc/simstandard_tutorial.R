@@ -57,6 +57,7 @@ ggcor <- function(d) {
     tibble::rownames_to_column("rowname") %>%
     tidyr::gather(colname, r, -rowname) %>%
     dplyr::mutate(rowname = forcats::fct_rev(rowname)) %>% 
+    dplyr::mutate(colname = factor(colname, levels = rev(levels(rowname)))) %>% 
     ggplot(aes(colname, rowname, fill = r)) +
     geom_tile(color = "gray90") +
     geom_text(aes(
@@ -133,7 +134,6 @@ sim_standardized(
   kable_styling()
 
 ## ------------------------------------------------------------------------
-
 d <- tibble::tribble(
   ~A1,  ~A2,  ~A3,
    2L,  2.5,  1.3,
@@ -143,7 +143,6 @@ d <- tibble::tribble(
 add_factor_scores(d, m ) %>% 
   kable() %>% 
   kable_styling()
-
 
 
 ## ----composites----------------------------------------------------------
@@ -195,16 +194,16 @@ summary(
   fit.measures = TRUE)
 
 # Extract RAM paths
-RAM <- semPlot::modelMatrices(lav_results)
+RAM <- lav2ram(lav_results)
 
 # Display asymmetric paths (i.e., single-headed arrows for 
 # loadings and structure coefficients)
-RAM$A[[1]]$std %>% ggcor()
+RAM$A %>% ggcor()
 
 # Display symmetric paths (i.e., curved double-headed arrows
 # exogenous variances, error variances, disturbance variances, 
 # and any covariances among these)
-RAM$S[[1]]$std %>% ggcor()
+RAM$S %>% ggcor()
 
 
 ## ----modelcomplete-------------------------------------------------------
@@ -217,4 +216,88 @@ B ~ 0.6 * A
 m_complete <- model_complete(m)
 # Display complete model
 cat(m_complete)
+
+## ------------------------------------------------------------------------
+m_meas <- matrix(c(
+	0.8,0,0,  # VC1
+	0.9,0,0,  # VC2
+	0.7,0,0,  # VC3
+	0,0.6,0,  # WM1
+	0,0.7,0,  # WM2
+	0,0.8,0,  # WM3
+	0,0,0.9,  # RD1
+	0,0,0.7,  # RD2
+	0,0,0.8), # RD3
+	nrow = 9, 
+	byrow = TRUE,
+	dimnames = list(
+	  c("VC1", "VC2", "VC3", 
+	    "WM1", "WM2", "WM3", 
+	    "RD1", "RD2", "RD3"),
+	  c("Vocabulary", "WorkingMemory", "Reading")))
+
+
+## ------------------------------------------------------------------------
+m_struct <- matrix(
+  c(0.4,0.3), 
+	ncol = 2,
+	dimnames = list(
+	  "Reading",
+	  c("Vocabulary", "WorkingMemory"))) 
+
+
+## ------------------------------------------------------------------------
+m_struct <- matrix(c(
+	0,   0,   0,  # Vocabulary
+	0,   0,   0,  # WorkingMemory
+	0.4, 0.3, 0), # Reading
+	nrow = 3, 
+	byrow = TRUE) 
+rownames(m_struct) <- c("Vocabulary", "WorkingMemory", "Reading")
+colnames(m_struct) <- c("Vocabulary", "WorkingMemory", "Reading")
+
+## ------------------------------------------------------------------------
+m_cov <- matrix(c(
+	1,   0.5, 
+	0.5, 1), 
+	nrow = 2,
+	dimnames = list(
+	  c("Vocabulary", "WorkingMemory"),
+	  c("Vocabulary", "WorkingMemory"))) 
+
+
+## ------------------------------------------------------------------------
+model <- matrix2lavaan(measurement_model = m_meas, 
+                       structural_model = m_struct, 
+                       covariances = m_cov)
+cat(model)
+
+## ------------------------------------------------------------------------
+# A tibble with indicator variables listed in the first column
+m_meas <- tibble::tribble(
+     ~Test, ~Vocabulary, ~WorkingMemory, ~Reading,
+     "VC1",         0.8,              0,        0,
+     "VC2",         0.9,              0,        0,
+     "VC3",         0.7,              0,        0,
+     "WM1",           0,            0.6,        0,
+     "WM2",           0,            0.7,        0,
+     "WM3",           0,            0.8,        0,
+     "RD1",           0,              0,      0.9,
+     "RD2",           0,              0,      0.7,
+     "RD3",           0,              0,      0.8)
+
+# A data.frame with criterion variable specified as a row name
+m_struct <- data.frame(Vocabulary = 0.4, 
+                       WorkingMemory = 0.3, 
+                       row.names = "Reading")
+
+# A data.frame with variable names specified as row names
+m_cov <- data.frame(Vocabulary =    c(1, 0.5),
+                    WorkingMemory = c(0.5, 1))
+rownames(m_cov) <- c("Vocabulary", "WorkingMemory")
+
+
+model <- matrix2lavaan(measurement_model = m_meas, 
+                       structural_model = m_struct, 
+                       covariances = m_cov)
 
