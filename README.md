@@ -1,13 +1,12 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# simstandard <img src="man/figures/logo.png" align="right" height=140/>
+# simstandard <img src="man/figures/logo.png" align="right" height="140/"/>
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/simstandard)](https://cran.r-project.org/package=simstandard)
-[![Rdoc](http://www.rdocumentation.org/badges/version/simstandard)](http://www.rdocumentation.org/packages/simstandard)
-[![develVersion](https://img.shields.io/badge/devel%20version-0.2.0-blue.svg?style=flat)](https://github.com/wjschne/simstandard)
-[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
+[![Rdoc](https://www.rdocumentation.org/badges/version/simstandard)](https://www.rdocumentation.org/packages/simstandard)
+[![lifecycle](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://www.tidyverse.org/lifecycle/#stable)
 [![Travis build
 status](https://travis-ci.org/wjschne/simstandard.svg?branch=master)](https://travis-ci.org/wjschne/simstandard)
 [![AppVeyor build
@@ -53,7 +52,8 @@ devtools::install_github("wjschne/simstandard")
 ## Example
 
 The `simstandard` package uses [lavaan
-syntax](http://lavaan.ugent.be/tutorial/syntax1.html) to specify models.
+syntax](https://lavaan.ugent.be/tutorial/syntax1.html) to specify
+models.
 
 ``` r
 library(simstandard)
@@ -70,12 +70,12 @@ knitr::kable(head(data), digits = 2)
 
 |     A1 |     A2 |     B1 |     B2 |      C |      A |      B |  e\_A1 |  e\_A2 |  e\_B1 |  e\_B2 |   d\_B |
 | -----: | -----: | -----: | -----: | -----: | -----: | -----: | -----: | -----: | -----: | -----: | -----: |
-| \-1.22 |   0.58 |   1.08 |   1.43 |   0.48 | \-0.49 |   0.12 | \-0.97 |   0.97 |   1.00 |   1.35 |   0.51 |
-| \-0.53 |   0.52 |   0.66 |   0.40 | \-0.76 |   1.77 |   0.41 | \-1.41 | \-0.90 |   0.41 |   0.11 | \-1.00 |
-| \-0.08 |   0.35 |   1.21 |   2.25 |   0.27 |   0.44 |   0.65 | \-0.30 |   0.00 |   0.82 |   1.80 |   0.30 |
-|   1.23 |   0.06 | \-2.34 | \-1.45 |   0.16 |   0.39 | \-0.63 |   1.04 | \-0.26 | \-1.96 | \-1.00 | \-0.95 |
-| \-0.38 | \-0.86 | \-0.66 | \-2.23 | \-0.96 | \-1.69 | \-1.48 |   0.47 |   0.50 |   0.23 | \-1.19 | \-0.12 |
-|   0.63 |   0.55 | \-0.65 | \-0.56 | \-0.02 |   0.22 | \-0.12 |   0.51 |   0.38 | \-0.58 | \-0.47 | \-0.30 |
+|   0.47 |   0.20 |   0.13 |   1.09 |   0.27 | \-0.26 | \-0.41 |   0.59 |   0.41 |   0.37 |   1.37 | \-0.20 |
+|   0.29 |   0.98 |   1.83 |   0.38 |   0.08 |   0.32 |   0.96 |   0.13 |   0.72 |   1.25 | \-0.30 |   0.71 |
+| \-1.16 |   0.25 |   0.70 |   0.71 |   0.57 |   0.91 |   0.08 | \-1.61 | \-0.48 |   0.65 |   0.66 | \-0.65 |
+| \-0.43 | \-0.16 | \-1.27 |   1.00 | \-1.86 | \-0.30 | \-0.54 | \-0.28 |   0.08 | \-0.95 |   1.38 | \-0.30 |
+|   1.39 |   0.63 |   0.77 |   0.80 |   1.47 |   0.29 | \-0.40 |   1.25 |   0.40 |   1.00 |   1.08 | \-0.63 |
+| \-0.13 | \-1.40 |   1.44 | \-0.53 |   0.55 | \-0.75 | \-0.19 |   0.24 | \-0.79 |   1.56 | \-0.40 |   0.41 |
 
 See more in the [tutorial for this
 package](https://wjschne.github.io/simstandard/articles/simstandard_tutorial.html).

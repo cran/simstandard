@@ -227,7 +227,7 @@ sim_standardized_matrices <- function(m,
   v_big <- c(vA, v_residual)
   dimnames(A_big) <- list(v_big, v_big)
 
-  # Initialise S_big
+  # Initialize S_big
   S_big <- matrix(0,
     nrow = length(v_big),
     ncol = length(v_big),
@@ -290,25 +290,45 @@ sim_standardized_matrices <- function(m,
     # Has Direct Indicators
     Has_direct <- (colSums(abs(A_composite_direct)) > 0) * 1
 
-    # Higher-order factors
-    A_composite_higher_order <- sign(A_composite_direct %*%
-                                       A[v_latent, v_latent, drop = F] %*%
-                                       diag(1 - Has_direct,
-                                            nrow = length(Has_direct)))
+    # Second-order factors
+    A_composite_second_order <- sign(
+      A_composite_direct %*%
+        A[v_latent, v_latent, drop = F] %*%
+        diag(1 - Has_direct,
+             nrow = length(Has_direct)))
+
+    # Third-order factors
+    Has_direct_second <- (colSums(abs(A_composite_second_order)) > 0) * 1
+    A_composite_third_order <- sign(
+      A_composite_second_order %*%
+        A[v_latent, v_latent, drop = F] %*%
+        diag(1 - Has_direct_second,
+             nrow = length(Has_direct_second)))
+
+    # Fourth-order factors
+    Has_direct_third <- (colSums(abs(A_composite_third_order)) > 0) * 1
+    A_composite_fourth_order <- sign(
+      A_composite_third_order %*%
+        A[v_latent, v_latent, drop = F] %*%
+        diag(1 - Has_direct_third,
+             nrow = length(Has_direct_third)))
 
 
-    A_composite <- A_composite_direct + A_composite_higher_order
+
+
+    A_composite <- A_composite_direct + A_composite_second_order + A_composite_third_order + A_composite_fourth_order
 
 
 
-    CM_composite <- t(A_composite) %*% R[v_observed_indicator,
-      v_observed_indicator,
-      drop = F
-    ] %*% A_composite
+    CM_composite <- t(A_composite) %*%
+      R[v_observed_indicator,
+        v_observed_indicator,
+        drop = FALSE] %*%
+      A_composite
 
-    A_composite_w <- A_composite %*% diag(diag(CM_composite) ^ -0.5,
-      nrow = nrow(CM_composite)
-    )
+    A_composite_w <- A_composite %*%
+      diag(diag(CM_composite) ^ -0.5, nrow = nrow(CM_composite))
+
     colnames(A_composite_w) <- v_composite_score
 
     colnames(A_factor_score) <- v_FS
@@ -354,9 +374,16 @@ sim_standardized_matrices <- function(m,
 
   # Factor Score Validity
   factor_score_validity <- diag(R_all[v_FS,
-                                      v_factor_score])
+                                      v_factor_score,
+                                      drop = FALSE])
   names(factor_score_validity) <- v_FS
   factor_score_se <- sqrt(1 - factor_score_validity ^ 2)
+
+  # Composite Score Validity
+  composite_score_validity <- diag(R_all[v_latent,
+                                         v_composite_score,
+                                         drop = FALSE])
+  names(composite_score_validity) <- v_composite_score
 
 
   # Return list ----
@@ -391,7 +418,8 @@ sim_standardized_matrices <- function(m,
       factor_score = A_factor_score,
       factor_score_validity = factor_score_validity,
       factor_score_se = factor_score_se,
-      composite_score = A_composite_w
+      composite_score = A_composite_w,
+      composite_score_validity = composite_score_validity
     ),
     lavaan_models = list(
       model_without_variances = m,
@@ -625,6 +653,52 @@ add_factor_scores <- function(d, m, CI = FALSE, p = 0.95, ...) {
   d_all
 }
 
+#' Add composite scores to observed data
+#'
+#' @export
+#' @param d A data.frame with observed data in standardized form (i.e, z-scores)
+#' @param m A character string with lavaan model
+#' @param ... parameters passed to simstandardized_matrices
+#' @return data.frame with observed data and estimated factor scores
+#' @examples
+#' library(simstandard)
+#' # lavaan model
+#' m = "
+#' X =~ 0.9 * X1 + 0.8 * X2 + 0.7 * X3
+#' "
+#'
+#' # Make data.frame for two cases
+#' d <- data.frame(
+#'   X1 = c(1.2, -1.2),
+#'   X2 = c(1.5, -1.8),
+#'   X3 = c(1.8, -1.1))
+#'
+#' # Compute factor scores for two cases
+#' add_composite_scores(d, m)
+add_composite_scores <- function(d, m, ...) {
+  sm <- sim_standardized_matrices(m, ...)
+
+
+  # Get composite score names
+  v_composite <- sm$v_names$v_composite_score
+
+  # Coefficients for composite scores
+  l_composite_score <- sm$Coefficients$composite_score
+
+  # Get observed score names
+  v_observed <- rownames(sm$Coefficients$composite_score)
+
+  # Get observed data
+  d_observed <- as.matrix(d[, v_observed, drop = FALSE])
+
+  # Make factor scores
+  d_composite_score <- d_observed %*% l_composite_score
+
+  # Bind factor scores to observed data
+  d_all <- cbind(as.data.frame(d), as.data.frame(d_composite_score))
+  d_all
+}
+
 #' Create lavaan model syntax from matrix coefficients
 #'
 #' @export
@@ -636,7 +710,7 @@ add_factor_scores <- function(d, m, CI = FALSE, p = 0.95, ...) {
 #' library(simstandard)
 #' # Specifying the measurement model:
 #' # For a data.frame, the column names are latent variables,
-#' # and the indictors can be specified as rownames.
+#' # and the indicators can be specified as rownames.
 #' m <- data.frame(X = c(0.7,0.8,0,0),
 #'                 Y = c(0,0,0.8,0.9))
 #' rownames(m) <- c("A", "B", "C", "D")
@@ -679,12 +753,13 @@ matrix2lavaan <- function(
   lav_s <- character(0)
   lav_c <- character(0)
 
-  # Measurment model ----
+  # Measurement model ----
   if (!is.null(measurement_model)) {
 
-    measurement_model <- check_matrix2lavaan(m = measurement_model,
-                                             mname = "Measurement model")
 
+    measurement_model <- check_matrix2lavaan(
+      m = measurement_model,
+      mname = "Measurement model")
 
     testcol_m <- colnames(measurement_model)[1]
     lav_m <- measurement_model %>%
@@ -714,8 +789,9 @@ matrix2lavaan <- function(
   # Structural model ----
   if (!is.null(structural_model)) {
 
-    structural_model <- check_matrix2lavaan(m = structural_model,
-                                            mname = "Structural model")
+    structural_model <- check_matrix2lavaan(
+      m = structural_model,
+      mname = "Structural model")
 
     testcol_s <- colnames(structural_model)[1]
     lav_s <- structural_model %>%
@@ -744,8 +820,11 @@ matrix2lavaan <- function(
 
   # Covariances ----
   if (!is.null(covariances)) {
-    covariances <- check_matrix2lavaan(m = covariances,
-                                       mname = "Covariances")
+
+
+    covariances <- check_matrix2lavaan(
+      m = covariances,
+      mname = "Covariances")
 
     mcovariances <- as.matrix(covariances[,-1, drop = FALSE])
     rownames(mcovariances) <- colnames(mcovariances)
@@ -790,7 +869,7 @@ matrix2lavaan <- function(
 
 }
 
-#' Extract standardized RAM matrices from lavaan object
+#' Extract standardized RAM matrices from a lavaan object
 #'
 #' @export
 #' @param fit An object of class lavaan
@@ -863,10 +942,10 @@ check_matrix2lavaan <- function(m, mname) {
 
   }
 
-  allnumeric_s <- purrr::map_lgl(m[, -1, drop = FALSE],is.numeric) %>%
-    all
-
-  if (!allnumeric_s) stop(paste("All columns of", tolower(mname), "must be numeric except for the first column."))
+  # allnumeric_s <- purrr::map_lgl(m[, -1, drop = FALSE],is.numeric) %>%
+  #   all
+  #
+  # if (!allnumeric_s) stop(paste("All columns of", tolower(mname), "must be numeric except for the first column."))
 
   m
 

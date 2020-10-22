@@ -1,4 +1,4 @@
-## ----setup, include = FALSE----------------------------------------------
+## ----setup, include = FALSE---------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -15,21 +15,22 @@ library(ggplot2)
 library(tibble)
 library(tidyr)
 library(dplyr)
-library(kableExtra)
+
 
 options(digits = 2)
 set.seed(123456)
 
 
 
-## ---- out.width=700, fig.align='center', echo = FALSE--------------------
+## ---- out.width=700, fig.align='center', echo = FALSE-------------------------
+
 knitr::include_graphics("ModelFigure.svg")
 
-## ----generate------------------------------------------------------------
+
+## ----generate-----------------------------------------------------------------
 library(simstandard)
 library(lavaan)
 library(knitr)
-library(kableExtra)
 library(dplyr)
 library(ggplot2)
 library(tibble)
@@ -46,36 +47,30 @@ B ~ 0.6 * A
 d <- sim_standardized(m, n = 100000)
 
 # Display First 6 rows
-head(d) %>% 
-  kable() %>% 
-  kable_styling()
+head(d)
 
-## ----corfunction---------------------------------------------------------
+## ----corfunction--------------------------------------------------------------
 ggcor <- function(d) {
   require(ggplot2)
   as.data.frame(d) %>%
     tibble::rownames_to_column("rowname") %>%
     tidyr::gather(colname, r, -rowname) %>%
     dplyr::mutate(rowname = forcats::fct_rev(rowname)) %>% 
-    dplyr::mutate(colname = factor(colname, levels = rev(levels(rowname)))) %>% 
+    dplyr::mutate(colname = factor(colname, 
+                                   levels = rev(levels(rowname)))) %>% 
     ggplot(aes(colname, rowname, fill = r)) +
     geom_tile(color = "gray90") +
-    geom_text(aes(
-      label = formatC(
-      r, 
-      digits = 2, 
-      format = "f") %>% 
-        stringr::str_replace_all("0\\.",".") %>% 
-        stringr::str_replace_all("1.00","1")), 
+    geom_text(aes(label = formatC(r, digits = 2, format = "f") %>% 
+                    stringr::str_replace_all("0\\.",".") %>% 
+                    stringr::str_replace_all("1.00","1")), 
     color = "white", 
     fontface = "bold",
     family = "serif") +
     scale_fill_gradient2(NULL,
-      na.value = "gray20",
-      limits = c(-1.01, 1.01),
-      high = "#924552",
-      low = "#293999"
-    ) +
+                         na.value = "gray20",
+                         limits = c(-1.01, 1.01),
+                         high = "#924552",
+                         low = "#293999") +
     coord_equal() +
     scale_x_discrete(NULL,position = "top") +
     scale_y_discrete(NULL) +
@@ -83,44 +78,54 @@ ggcor <- function(d) {
 }
 
 
-## ----modelcov------------------------------------------------------------
+## ----modelcov-----------------------------------------------------------------
 cov(d) %>% 
   ggcor
 
-## ----observed------------------------------------------------------------
+## ----observed-----------------------------------------------------------------
 d <- sim_standardized(m,
                       n = 100000,
                       latent = FALSE,
                       errors = FALSE)
 # Display First 6 rows
-head(d) %>% 
-  kable() %>% 
-  kable_styling()
+head(d) 
 
-## ----lavaan--------------------------------------------------------------
+## ----lavaan-------------------------------------------------------------------
+test_model <- "
+Y ~ -.75 * X_1 + .25 * X_2
+X =~ .75 * X_1 + .75 * X_2
+"
+
 library(lavaan)
 d_lavaan <- simulateData(
-  model = m, 
+  model = test_model, 
   sample.nobs = 100000, 
   standardized = TRUE)
 cov(d_lavaan) %>% 
   ggcor
 
-## ----simmatrices---------------------------------------------------------
+## ----simstandard_comparison---------------------------------------------------
+sim_standardized(test_model, 
+                 n = 100000, 
+                 errors = FALSE) %>% 
+  cov %>% 
+  ggcor()
+
+## ----simmatrices--------------------------------------------------------------
 matrices <- sim_standardized_matrices(m)
 
-## ----Amatrix-------------------------------------------------------------
+## ----Amatrix------------------------------------------------------------------
 matrices$RAM_matrices$A %>% 
   ggcor()
 
-## ----Smatrix-------------------------------------------------------------
+## ----Smatrix------------------------------------------------------------------
 matrices$RAM_matrices$S %>% 
   ggcor()
 
-## ---- out.width=700, fig.align='center', echo = FALSE--------------------
+## ---- out.width=700, fig.align='center', echo = FALSE-------------------------
 knitr::include_graphics("ModelFigureComplete.svg")
 
-## ----estfactorscores-----------------------------------------------------
+## ----estfactorscores----------------------------------------------------------
 m <- "
 A =~ 0.9 * A1 + 0.8 * A2 + 0.7 * A3
 "
@@ -129,23 +134,19 @@ sim_standardized(
   n = 100000, 
   factor_scores = TRUE
   ) %>% 
-  head() %>% 
-  kable() %>% 
-  kable_styling()
+  head() 
 
-## ------------------------------------------------------------------------
+## ----add_factor_scores--------------------------------------------------------
 d <- tibble::tribble(
   ~A1,  ~A2,  ~A3,
    2L,  2.5,  1.3,
   -1L, -1.5, -2.1
   )
 
-add_factor_scores(d, m ) %>% 
-  kable() %>% 
-  kable_styling()
+add_factor_scores(d, m ) 
 
 
-## ----composites----------------------------------------------------------
+## ----composites---------------------------------------------------------------
 m <- "
 A =~ 0.9 * A1 + 0.8 * A2 + 0.7 * A3
 "
@@ -154,12 +155,13 @@ sim_standardized(
   n = 100000, 
   composites = TRUE
   ) %>% 
-  head() %>% 
-  kable() %>% 
-  kable_styling()
+  head()
   
 
-## ----fix2free------------------------------------------------------------
+## ----add_composite_scores-----------------------------------------------------
+add_composite_scores(d, m ) 
+
+## ----fix2free-----------------------------------------------------------------
 # lavaan syntax for model
 m <- "
 A =~ 0.7 * A1 + 0.8 * A2 + 0.9 * A3 + 0.3 * B1
@@ -171,7 +173,7 @@ m_free <- fixed2free(m)
 # Display model m_free
 cat(m_free)
 
-## ----lavaantest----------------------------------------------------------
+## ----lavaantest---------------------------------------------------------------
 # Set the random number generator for reproducible results
 set.seed(12)
 # Generate data based on model m
@@ -206,7 +208,7 @@ RAM$A %>% ggcor()
 RAM$S %>% ggcor()
 
 
-## ----modelcomplete-------------------------------------------------------
+## ----modelcomplete------------------------------------------------------------
 # Specify model
 m <- "
 A =~ 0.7 * A1 + 0.8 * A2 + 0.9 * A3 + 0.3 * B1
@@ -217,7 +219,7 @@ m_complete <- model_complete(m)
 # Display complete model
 cat(m_complete)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 m_meas <- matrix(c(
 	0.8,0,0,  # VC1
 	0.9,0,0,  # VC2
@@ -237,7 +239,7 @@ m_meas <- matrix(c(
 	  c("Vocabulary", "WorkingMemory", "Reading")))
 
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 m_struct <- matrix(
   c(0.4,0.3), 
 	ncol = 2,
@@ -246,7 +248,7 @@ m_struct <- matrix(
 	  c("Vocabulary", "WorkingMemory"))) 
 
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 m_struct <- matrix(c(
 	0,   0,   0,  # Vocabulary
 	0,   0,   0,  # WorkingMemory
@@ -256,7 +258,7 @@ m_struct <- matrix(c(
 rownames(m_struct) <- c("Vocabulary", "WorkingMemory", "Reading")
 colnames(m_struct) <- c("Vocabulary", "WorkingMemory", "Reading")
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 m_cov <- matrix(c(
 	1,   0.5, 
 	0.5, 1), 
@@ -266,13 +268,13 @@ m_cov <- matrix(c(
 	  c("Vocabulary", "WorkingMemory"))) 
 
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 model <- matrix2lavaan(measurement_model = m_meas, 
                        structural_model = m_struct, 
                        covariances = m_cov)
 cat(model)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 # A tibble with indicator variables listed in the first column
 m_meas <- tibble::tribble(
      ~Test, ~Vocabulary, ~WorkingMemory, ~Reading,
