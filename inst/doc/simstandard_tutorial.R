@@ -54,8 +54,8 @@ ggcor <- function(d) {
   require(ggplot2)
   as.data.frame(d) %>%
     tibble::rownames_to_column("rowname") %>%
-    tidyr::gather(colname, r, -rowname) %>%
-    dplyr::mutate(rowname = forcats::fct_rev(rowname)) %>% 
+    tidyr::pivot_longer(-rowname, names_to = "colname", values_to = "r") %>%
+    dplyr::mutate(rowname = forcats::fct_inorder(rowname) %>% forcats::fct_rev()) %>% 
     dplyr::mutate(colname = factor(colname, 
                                    levels = rev(levels(rowname)))) %>% 
     ggplot(aes(colname, rowname, fill = r)) +
@@ -302,4 +302,13 @@ rownames(m_cov) <- c("Vocabulary", "WorkingMemory")
 model <- matrix2lavaan(measurement_model = m_meas, 
                        structural_model = m_struct, 
                        covariances = m_cov)
+
+## -----------------------------------------------------------------------------
+get_model_implied_correlations(m) %>% 
+  ggcor()
+
+## -----------------------------------------------------------------------------
+get_model_implied_correlations(m, 
+                               latent = TRUE) %>% 
+  ggcor()
 
