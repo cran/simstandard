@@ -2,7 +2,6 @@
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  dev = "svg",
   out.height = "100%",
   out.width = "100%",
   fig.width = 7,
@@ -24,7 +23,7 @@ set.seed(123456)
 
 ## ---- out.width=700, fig.align='center', echo = FALSE-------------------------
 
-knitr::include_graphics("ModelFigure.svg")
+knitr::include_graphics("ModelFigure.png")
 
 
 ## ----generate-----------------------------------------------------------------
@@ -123,7 +122,7 @@ matrices$RAM_matrices$S %>%
   ggcor()
 
 ## ---- out.width=700, fig.align='center', echo = FALSE-------------------------
-knitr::include_graphics("ModelFigureComplete.svg")
+knitr::include_graphics("ModelFigureComplete.png")
 
 ## ----estfactorscores----------------------------------------------------------
 m <- "
